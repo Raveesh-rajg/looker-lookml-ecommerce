@@ -1,4 +1,4 @@
-# LookML Semantic Layer — e-commerce warehouse
+# Governed LookML Semantic Layer | E-commerce warehouse
 
 A LookML project over the Snowflake e-commerce marts (the Project-1
 warehouse): two explores, three views, a native derived table with
