@@ -47,8 +47,8 @@ class TestConventions:
             for m in v.get("measures", []):
                 assert "type" in m, f"{fname}:{m['name']} untyped"
                 if "revenue" in m["name"] or "value" in m["name"]:
-                    assert m.get("value_format_name") == "usd", (
-                        f"{fname}:{m['name']} money without usd format")
+                    assert m.get("value_format") == "R$ #,##0.00", (
+                        f"{fname}:{m['name']} money without BRL format")
 
     def test_ratio_measures_guard_divide_by_zero(self):
         for fname, v in self.views():

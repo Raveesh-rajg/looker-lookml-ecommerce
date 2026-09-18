@@ -1,27 +1,27 @@
 # customer_order_facts — NATIVE DERIVED TABLE: per-customer rollups derived
 # from the orders explore itself, so the definitions can never drift from
-# the base measures. Persisted nightly: it powers cohort-style analysis
+# the base measures. Persisted hourly: it powers cohort-style analysis
 # where per-query recomputation is waste.
 
 view: customer_order_facts {
   derived_table: {
     explore_source: orders {
-      column: customer_id { field: orders.customer_id }
+      column: customer_unique_id { field: orders.customer_unique_id }
       column: lifetime_orders { field: orders.order_count }
       column: lifetime_revenue { field: orders.total_gross_revenue }
-      column: first_order { field: orders.ordered_date }
+      column: first_order { field: orders.first_order_date }
       derived_column: is_repeat_customer {
         sql: lifetime_orders > 1 ;;
       }
     }
-    datagroup_trigger: nightly_etl
+    datagroup_trigger: hourly_refresh
   }
 
-  dimension: customer_id {
+  dimension: customer_unique_id {
     primary_key: yes
     type: string
     hidden: yes
-    sql: ${TABLE}.customer_id ;;
+    sql: ${TABLE}.customer_unique_id ;;
   }
 
   dimension: lifetime_orders {
@@ -31,7 +31,7 @@ view: customer_order_facts {
 
   dimension: lifetime_revenue {
     type: number
-    value_format_name: usd
+    value_format: "R$ #,##0.00"
     sql: ${TABLE}.lifetime_revenue ;;
   }
 

@@ -4,35 +4,32 @@ connection: "snowflake_olist"
 
 include: "/views/*.view.lkml"
 
-datagroup: nightly_etl {
-  sql_trigger: SELECT MAX(ORDERED_AT) FROM OLIST_DB.STAGING_marts.FCT_ORDERS ;;
-  max_cache_age: "24 hours"
-  description: "Invalidate caches and rebuild PDTs when new orders land."
+# Time-based invalidation also sees historical corrections in the full dbt rebuild.
+datagroup: hourly_refresh {
+  interval_trigger: "1 hour"
+  max_cache_age: "1 hour"
 }
-
-persist_with: nightly_etl
+persist_with: hourly_refresh
 
 explore: orders {
   label: "Orders & Revenue"
-  description: "Order-grain analysis. Canceled orders are excluded by default and re-includable deliberately."
+  description: "Order-grain analysis. Delivered orders by default, matching the dbt marts. The visible filter can be changed deliberately."
 
-  # governed default: revenue metrics exclude canceled orders EVERYWHERE,
-  # but analysts can override consciously (always_filter, not sql_always_where,
-  # exactly so the exclusion is visible and changeable in the UI)
+  # Visible default matches delivered-order revenue in dbt; users can inspect or change it.
   always_filter: {
-    filters: [orders.order_status: "-canceled"]
+    filters: [orders.order_status: "delivered"]
   }
 
   join: customers {
     type: left_outer
     relationship: many_to_one          # many orders -> one customer
-    sql_on: ${orders.customer_id} = ${customers.customer_id} ;;
+    sql_on: ${orders.customer_unique_id} = ${customers.customer_unique_id} ;;
   }
 
   join: customer_order_facts {
     type: left_outer
     relationship: many_to_one
-    sql_on: ${orders.customer_id} = ${customer_order_facts.customer_id} ;;
+    sql_on: ${orders.customer_unique_id} = ${customer_order_facts.customer_unique_id} ;;
   }
 }
 
@@ -41,6 +38,6 @@ explore: customers {
   join: customer_order_facts {
     type: left_outer
     relationship: one_to_one
-    sql_on: ${customers.customer_id} = ${customer_order_facts.customer_id} ;;
+    sql_on: ${customers.customer_unique_id} = ${customer_order_facts.customer_unique_id} ;;
   }
 }

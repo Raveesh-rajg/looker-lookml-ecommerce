@@ -1,56 +1,52 @@
-# Governed LookML Semantic Layer | E-commerce warehouse
+# Governed E-commerce Semantic Layer
 
-A LookML project over the Snowflake e-commerce marts (the Project-1
-warehouse): two explores, three views, a native derived table with
-datagroup-triggered persistence, and governed metric defaults — validated
-by a **10-test structural CI** built on the `lkml` parser, because the
-project was authored without a Looker instance and says so plainly.
+Expose delivered-order revenue and stable customer lifetime value from the Olist dbt marts through LookML.
 
-## The access reality (read this first)
+## Implementation and validation
 
-Looker (Google Cloud core) has no self-serve free tier; trials go through
-sales, and instance pricing is enterprise-scale. Rather than fake
-screenshots, this repo treats LookML as what it is — code — and ships the
-things code can prove without a host:
+15 local parser and warehouse-contract tests pass. Snowflake connectivity, Looker SQL generation, dashboard rendering and cache behavior require a live Looker instance.
 
-- `lkml`-parsed validity for every file
-- conventions enforced by tests: every view has exactly one primary key,
-  money measures carry `usd` formats, every ratio guards division by zero,
-  every join declares its `relationship` (the silent-fan-out killer),
-  the orders explore carries its governed cancel-filter
-- If/when an instance is available (employer sandbox, partner trial), the
-  project deploys as-is: `connection: "snowflake_olist"` is the only
-  environment binding.
+Automated checks: **15 tests**. The GitHub Actions run linked above the file browser is the current CI result. Local checks and external integrations are separate claims.
 
-## What the LookML demonstrates
+## Reproduce locally
 
-- **Semantics defined once.** `total_gross_revenue`, AOV (recomputed from
-  sums, never averaged averages), late-delivery rate — measures live in the
-  view; every dashboard inherits them.
-- **Governed defaults that stay visible.** Canceled orders are excluded via
-  `always_filter` (user-visible, consciously overridable) rather than
-  `sql_always_where` (invisible) — the difference is the difference between
-  governance and mystery.
-- **Native derived table** (`customer_order_facts`): per-customer rollups
-  derived FROM the orders explore itself so definitions can't drift, and
-  persisted via a `datagroup` keyed to warehouse freshness
-  (`sql_trigger` on MAX(ordered_at)) rather than a dumb schedule.
-- **Join hygiene**: keys hidden, `relationship` declared everywhere,
-  many_to_one throughout — the fan-out discipline Looker makes explicit.
+Use Python 3.12. Run from this repository’s root in a fresh virtual environment.
 
-## Run the validation
-
-```bash
-pip install lkml pytest
-pytest tests/ -q     # 10 tests
+```sh
+python -m venv .venv
+# Activate .venv for your shell, then:
+python -m pip install -r requirements.txt
 ```
 
-## Files
+For repositories using `src/`, set the import path before running commands:
 
+```powershell
+# PowerShell
+$env:PYTHONPATH="src"
 ```
-models/ecommerce.model.lkml    connection, datagroup, 2 explores
-views/orders.view.lkml         fact view: dimension_groups, tiers, measures
-views/customers.view.lkml      conformed dimension
-views/customer_order_facts...  native derived table + repeat-rate measure
-tests/test_lookml.py           the structural CI
+```sh
+# macOS/Linux
+export PYTHONPATH=src
 ```
+
+```sh
+python -m pytest tests -q
+```
+
+## Data and interpretation
+
+The column contract is taken from dbt-snowflake-ecommerce commit 8ce2e7f. Monetary measures are BRL, not USD. customer_unique_id identifies a person across orders.
+
+## Inspect the work
+
+- [`tests/`](tests/) — executable checks and examples.
+- [`docs/`](docs/) — methodology, integration specifications and the historical design.
+- [Portfolio](https://raveesh-rajg.github.io/) — project directory.
+
+## Completion boundary
+
+Passing local tests establishes the checks listed in this repository. It does not establish cloud deployment, real-data quality, production security, or native BI rendering unless an explicit verification record says so.
+
+## Connect Looker
+
+Import the repository into a Looker project. Set `connection` in `models/ecommerce.model.lkml` to your Snowflake connection. Set `warehouse_database` and `marts_schema` in `manifest.lkml`; run Looker validation before deploying. The schema must contain the matching dbt marts. No Looker instance URL has been supplied.
